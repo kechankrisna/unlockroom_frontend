@@ -1,0 +1,22 @@
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity .5s
+}
+
+.fade-enter,
+.fade-leave-active {
+  opacity: 0
+}
+
+a {
+  text-decoration: none;
+}
+
+.border {
+  border: 1px solid #cccccc;
+
+}
+
+.radius {
+  border-radius: 5px;
+}
