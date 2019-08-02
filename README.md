@@ -1,10 +1,16 @@
-# frontend
+# unlockroom
 
-> This is the web frontend application for unlockroom
+> This is the web frontend application for unlockroom which was built with nuxtjs framework. This application will fetch data from the backend with port 8000. The application will live at port 3000
 
-## Build Setup
+# Before getting start
+> - make sure you have installed npm or yarn on your computer otherwise please install it.
+
+# Getting start
 
 ``` bash
+# clone app
+$ git clone https://github.com/kechankrisna/unlockroom_frontend.git
+
 # install dependencies
 $ yarn install
 

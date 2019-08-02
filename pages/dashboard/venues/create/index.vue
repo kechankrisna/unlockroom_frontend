@@ -30,8 +30,8 @@
                     v-model="form.description"
                   ></v-textarea>
 
-                  <v-text-field type="number" prepend-icon="monetization_on" label="Deposit rate %"></v-text-field>
-                  <v-text-field type="number" prepend-icon="monetization_on" label="Tax rate %"></v-text-field>
+                  <v-text-field type="number" v-model="form.deposit_rate" prepend-icon="monetization_on" label="Deposit rate %" ></v-text-field>
+                  <v-text-field type="number" v-model="form.tax_rate" prepend-icon="monetization_on" label="Tax rate %" ></v-text-field>
 
                   <v-select
                     v-model="form.currency"
@@ -161,10 +161,6 @@
                       </div>
                     </v-flex>
                   </v-layout>
-                  
-
-                  
-                  
 
                   <v-text-field
                     prepend-icon="edit_location"
@@ -213,8 +209,27 @@
           </v-tabs>
 
           <v-card-text>
-            <v-text-field prepend-icon="panorama" label="Choose Cover"></v-text-field>
-            <v-text-field prepend-icon="image" label="Create Gallery"></v-text-field>
+
+            <v-img :src="cover.url" :ratio="4/3" v-if="cover.url" max-height="400" />
+            <v-btn @click.prevent="openCoverImageDialog" class="success">
+              <v-icon class="pr-1">image</v-icon>Choose cover image
+            </v-btn>
+
+            <v-btn @click.prevent="openGalleryImageDialog" class="purple" dark>
+              <v-icon class="pr-1">perm_media</v-icon>Create Gallery
+            </v-btn>
+          
+            <v-layout wrap>
+              <v-flex xs6 sm3 md2 v-for="(gallery, index) in galleries" :key="index">
+                <v-img 
+                  :src="gallery.size.medium" 
+                  aspect-ratio="1"
+                  class="grey lighten-1 ma-1 elevation-2">
+                </v-img>
+              </v-flex>
+            </v-layout>
+            
+
           </v-card-text>
         </v-card>
       </v-flex>
@@ -233,13 +248,23 @@
         </v-card>
 
         <v-card class="elevation-1 ma-1">
+          <v-card-text>
+            <v-toolbar-title text-color="primary"> Choose Region </v-toolbar-title>
+          </v-card-text>
+          <v-divider></v-divider>
+          <v-card-text>
+            <v-select :items="regions" item-text="title" item-value="id" v-model="form.region" label="Select a specific region" hint="This will help client to filter"></v-select>
+          </v-card-text>
+        </v-card>
+
+        <v-card class="elevation-1 ma-1">
           <v-card-text flat>
             <v-toolbar-title text-color="white">Feature image</v-toolbar-title>
           </v-card-text>
           <v-divider></v-divider>
           <v-card-text>
-            <v-img :src="imageUrl" :ratio="9/16" v-if="imageUrl" />
-            <v-btn @click.prevent="openImageDialog" class="primary">
+            <v-img :src="image.url" :ratio="9/16" v-if="image.url" />
+            <v-btn @click.prevent="openFeatureImageDialog" class="primary">
               <v-icon class="pr-1">perm_media</v-icon>Choose feature image
             </v-btn>
           </v-card-text>
@@ -254,17 +279,21 @@
             <v-layout wrap>
               <v-flex xs6 sm4 md2 v-for="(userImage, index) in userImages" :key="index">
                 <v-img
-                  @click.prevent="selectImage(userImage)"
+                  @click.prevent="clickImage(userImage)"
                   :src="userImage.size.medium"
                   aspect-ratio="1"
                   class="grey lighten-1 ma-1 elevation-2"
                 >
-                  <v-layout pa-2 column fill-height class="lightbox white--text">
+                  <v-layout v-if="userImage.selected" pa-2 column fill-height class="lightbox white--text">
                     <v-spacer></v-spacer>
-                    <v-flex shrink>
+                    <v-flex shrink  >
                       <div class="subheading">{{userImage.title}}</div>
                       <div class="body-1">
                         <v-layout wrap>
+                          <v-btn class="mx-2" fab dark small color="success">
+                            <v-icon dark>done</v-icon>
+                          </v-btn>
+
                           <v-icon @click.prevent="editImage(userImage)" color="white">edit</v-icon>
 
                           <v-icon @click.prevent="deleteImage(userImage)" color="red">cancel</v-icon>
@@ -288,7 +317,9 @@
             <v-btn class="success" @click.prevent="pickFile">Upload</v-btn>
 
             <v-spacer></v-spacer>
-            <v-btn class="primary" @click.prevent="chooseFile">Choose</v-btn>
+            <v-btn v-if="chooseFeature" class="primary" @click.prevent="selectFeatureImage">Select Feature</v-btn>
+            <v-btn v-if="chooseCover" class="primary" @click.prevent="selectCoverImage">Select Cover</v-btn>
+            <v-btn v-if="chooseGallery" class="primary" @click.prevent="selectGalleryImage">Select These</v-btn>
           </v-card-actions>
         </v-card>
       </v-dialog>
@@ -311,16 +342,18 @@ export default {
       //map
       // center:{ lat: 13.6227568, lng: 103.7022686},
 
+      chooseFeature: false,
+      chooseCover: false,
+      chooseGallery:false,
       snackbar: false,
       dialog: false,
       isImageProcessing: false,
-      imageId: "",
-      imageName: "",
-      imageUrl: "",
-      imageFile: "",
+      cover: {id: "", name: "", url: "", file:""},
+      image:{id: "", name: "", url: "", file:""},
       startHour: false,
       endHour: false,
       currencies: ["USD Dollar", "KH Riel"],
+      regions: [],
       form: {
         title: "",
         description: "",
@@ -330,8 +363,8 @@ export default {
           end: "21:00"
         },
         currency: "",
-        deposit_rate: "",
-        tax_rate: "",
+        deposit_rate: 0,
+        tax_rate: 0,
         address: "",
         lat: 13.6227568,
         lng: 103.7022686,
@@ -340,49 +373,34 @@ export default {
 
         image: "",
         cover: "",
-        galleries: new Array()
+        galleries: []
       },
-      userImages: []
+      userImages: [],
+      galleries: []
     };
   },
 
   methods: {
-    //on remove chips
-    removeVenue(item) {
-      this.post.venues.splice(this.post.venues.indexOf(item), 1);
-      this.post.venues = [...this.post.venues];
-    },
 
-    //on remove chips
-    removeVenue(item) {
-      this.post.venues.splice(this.post.venues.indexOf(item), 1);
-      this.post.venues = [...this.post.venues];
-    },
-
+/**
+ * Image handle
+ */
     //handle image picker
     pickFile() {
       this.$refs.image.click();
-    },
-    //handle remove picker
-    remove() {
-      this.imageFile = "";
-      this.imageName = "";
-      this.imageUrl = "";
     },
 
     onFilePicked(e) {
       this.isImageProcessing = true;
       const files = e.target.files;
       if (files[0] !== undefined) {
-        this.imageName = files[0].name;
-        if (this.imageName.lastIndexOf(".") <= 0) {
+        this.image.name = files[0].name;
+        if (this.image.name.lastIndexOf(".") <= 0) {
           return;
         }
         const fr = new FileReader();
         fr.readAsDataURL(files[0]);
         fr.addEventListener("load", () => {
-          this.imageUrl = fr.result;
-          this.imageFile = files[0]; // this is an image file that can be sent to server...
 
           const config = {
             headers: { "content-type": "multipart/form-data" }
@@ -401,39 +419,136 @@ export default {
               console.log(err);
             });
         });
-      } else {
-        this.imageName = "";
-        this.imageFile = "";
-        this.imageUrl = "";
       }
     },
 
-    //choose image feature
-    openImageDialog() {
+    //open dialog to choose image feature
+    openFeatureImageDialog() {
+      this.chooseFeature = true,
+      this.chooseCover = false,
+      this.chooseGallery = false,
       this.$axios.get("/images/").then(res => {
-        this.userImages = res.data.data;
+        
+        if(this.form.image){
+              this.userImages = [...res.data.data.map(image => {
+                if(image.id === this.form.image){
+                  image.selected = true
+                }else{
+                  image.selected = false
+                }
+                return image;
+              })];
+        }else{
+          this.userImages = res.data.data;
+        }
       });
       return (this.dialog = true);
     },
-    selectImage(userImage) {
-      this.form.image = userImage.id;
-      this.imageId = userImage.id;
-      this.imageUrl = userImage.size.medium;
-      this.imageFile = userImage.size.medium;
+
+    //open dialog to choose image cover
+    openCoverImageDialog() {
+      this.chooseFeature = false,
+      this.chooseCover = true,
+      this.chooseGallery = false,
+      this.$axios.get("/images/").then(res => {
+        
+        if(this.form.cover){
+              this.userImages = [...res.data.data.map(image => {
+                if(image.id === this.form.cover){
+                  image.selected = true
+                }else{
+                  image.selected = false
+                }
+                return image;
+              })];
+        }else{
+          this.userImages = res.data.data;
+        }
+      });
+      return (this.dialog = true);
     },
 
-    onSubmitPhoto() {
-      console.log(this.image);
+    //open dialog to choose gallery
+    openGalleryImageDialog() {
+      this.chooseFeature = false,
+      this.chooseCover = false,
+      this.chooseGallery = true,
+      this.$axios.get("/images/").then(res => {
+        
+        if(this.form.galleries.length>0){
+            this.userImages = [...res.data.data.map(image => {
+                if( this.form.galleries.indexOf(image.id) >= 0){
+                  image.selected = true
+                }
+                return image;
+              })];
+        }else{
+          this.userImages = res.data.data;
+        }
+      });
+      return (this.dialog = true);
     },
 
-    chooseFile() {
+    //handle choose button in dialog
+    clickImage(img){
+      this.userImages = [...this.userImages.map(image => {
+        
+          if(image.id == img.id){
+            image.selected != true ? image.selected = true : image.selected = false ;
+          }else{
+            if(this.chooseFeature || this.chooseCover){
+              image.selected = false;
+            }
+          }
+        return image;
+      })];
+    },
+
+    //choose feature image handler button
+    selectFeatureImage() {
+      const userImage = this.userImages.filter(image => image.selected === true )[0];
+      if(userImage){
+        this.form.image = userImage.id;
+        this.image.id = userImage.id;
+        this.image.url = userImage.size.medium;
+        this.image.file = userImage.size.medium;
+        return (this.dialog = false);
+      }
+      
+    },
+
+    //choose cover image handler button
+    selectCoverImage() {
+      const userImage = this.userImages.filter(image => image.selected === true )[0];
+      if(userImage){
+        this.form.cover = userImage.id;
+        this.cover.id = userImage.id;
+        this.cover.url = userImage.size.full;
+        this.cover.file = userImage.size.full;
+        return (this.dialog = false);
+      }
+    },
+
+    //choose gallery image handler button
+    selectGalleryImage(){
+      const galleries = this.userImages.filter(image => image.selected === true );
+      this.galleries = galleries;
+
+        let nullArray = [];
+        galleries.map( gallery => {
+          nullArray.push(gallery.id);
+        });
+        this.form.galleries = nullArray;
+      
       return (this.dialog = false);
     },
 
+    //edit image handler
     editImage(userImage) {
       console.log(userImage);
     },
 
+    //image deletion handler
     deleteImage(userImage) {
       this.isImageProcessing = true;
       this.$axios
@@ -449,13 +564,17 @@ export default {
         });
     },
 
+/**
+ * End Image handle
+ */
+
     publish(status) {
       this.form.status = status;
       this.$axios
         .post("/venues/create", this.form)
         .then(res => {
-          this.snackbar = true;
-          this.reset();
+           this.reset();
+           this.snackbar = true;
         })
         .catch(err => {
           console.log(err);
@@ -463,15 +582,13 @@ export default {
     },
 
     reset() {
-      this.imageId = "";
-      this.imageName = "";
-      this.imageUrl = "";
-      this.imageFile = "";
-      this.form.title = "";
-      this.form.description = "";
-      this.form.image = "";
+      Object.assign(this.$data, this.$options.data());
     },
 
+
+    /**
+     * Google map handler
+     */
     someFunc(e) {
       console.log(e);
     },
@@ -492,7 +609,12 @@ export default {
   },
 
   mounted() {
-
+    this.$axios.get('/regions/').then(res => {
+      this.regions = res.data.data;
+    }).catch(e => {
+      console.log(e);
+      
+    });
   }
 };
 </script>
