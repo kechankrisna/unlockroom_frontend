@@ -26,3 +26,13 @@ $ yarn generate
 ```
 
 For detailed explanation on how things work, checkout [Nuxt.js docs](https://nuxtjs.org).
+
+# Screenshot
+
+![Screenshot1](https://raw.githubusercontent.com/kechankrisna/unlockroom_frontend/master/screens/screenshot1.png)
+
+![Screenshot2](https://raw.githubusercontent.com/kechankrisna/unlockroom_frontend/master/screens/screenshot2.png)
+
+![Screenshot3](https://raw.githubusercontent.com/kechankrisna/unlockroom_frontend/master/screens/screenshot3.png)
+
+![Screenshot3](https://raw.githubusercontent.com/kechankrisna/unlockroom_frontend/master/screens/screenshot3.png)
